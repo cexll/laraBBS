@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Queries\TopicQuery;
 use App\Http\Requests\Api\TopicRequest;
 use App\Http\Resources\TopicResource;
 use App\Models\Topic;
@@ -15,36 +16,46 @@ class TopicsController extends Controller
     /**
      * 话题列表
      * @param Request $request
-     * @param Topic $topic
+     * @param TopicQuery $query
      * @return \Illuminate\Http\Resources\Json\AnonymousResourceCollection
      */
-    public function index(Request $request, Topic $topic)
+    public function index(Request $request, TopicQuery $query)
     {
-        $topics = QueryBuilder::for(Topic::class)
-            ->allowedIncludes('user', 'category')
-            ->allowedFilters([
-                'title',
-                AllowedFilter::exact('category_id'),
-                AllowedFilter::scope('withOrder')->default('recentReplied'),
-            ])
-            ->paginate();
+        $topics = $query->paginate();
+
+//
+//        $topics = QueryBuilder::for(Topic::class)
+//            ->allowedIncludes('user', 'category')
+//            ->allowedFilters([
+//                'title',
+//                AllowedFilter::exact('category_id'),
+//                AllowedFilter::scope('withOrder')->default('recentReplied'),
+//            ])
+//            ->paginate();
 
         return TopicResource::collection($topics);
 
     }
 
-    public function userIndex(Request $request, User $user)
+    /**
+     * 某个用户话题列表
+     * @param Request $request
+     * @param User $user
+     * @return \Illuminate\Http\Resources\Json\AnonymousResourceCollection
+     */
+    public function userIndex(Request $request, User $user, TopicQuery $query)
     {
-        $query = $user->topics()->getQuery();
+        $topics = $query->where('user_id', $user->id)->paginate();
+//        $query = $user->topics()->getQuery();
 
-        $topics = QueryBuilder::for($query)
-            ->allowedIncludes('user', 'category')
-            ->allowedFilters([
-                'title',
-                AllowedFilter::exact('category_id'),
-                AllowedFilter::scope('withOrder')->default('recentReplied'),
-            ])
-            ->paginate();
+//        $topics = QueryBuilder::for($query)
+//            ->allowedIncludes('user', 'category')
+//            ->allowedFilters([
+//                'title',
+//                AllowedFilter::exact('category_id'),
+//                AllowedFilter::scope('withOrder')->default('recentReplied'),
+//            ])
+//            ->paginate();
 
         return TopicResource::collection($topics);
     }
@@ -80,6 +91,12 @@ class TopicsController extends Controller
         return new TopicResource($topic);
     }
 
+    /**
+     * 删除话题
+     * @param Topic $topic
+     * @return \Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\Routing\ResponseFactory|\Illuminate\Http\Response
+     * @throws \Illuminate\Auth\Access\AuthorizationException
+     */
     public function destroy(Topic $topic)
     {
         $this->authorize('destroy', $topic);
@@ -87,5 +104,16 @@ class TopicsController extends Controller
         $topic->delete();
 
         return response(null, 204);
+    }
+
+    public function show($topicId, TopicQuery $query)
+    {
+
+        $topic = $query->findOrFail($topicId);
+//        $topic = QueryBuilder::for(Topic::class)
+//            ->allowedIncludes('user', 'category')
+//            ->findOrFail($topicId);
+
+        return new TopicResource($topic);
     }
 }

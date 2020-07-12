@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use Spatie\QueryBuilder\QueryBuilder;
+
 class Topic extends Model
 {
     protected $fillable = [
@@ -59,5 +61,13 @@ class Topic extends Model
     {
         $this->reply_count = $this->replies->count();
         $this->save();
+    }
+
+    public function resolveRouteBinding($value)
+    {
+        return QueryBuilder::for(self::class)
+            ->allowedIncludes('user', 'category')
+            ->where($this->getRouteKeyName(), $value)
+            ->first();
     }
 }
