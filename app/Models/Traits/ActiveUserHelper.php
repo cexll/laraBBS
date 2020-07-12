@@ -5,9 +5,9 @@ namespace App\Models\Traits;
 use App\Models\Topic;
 use App\Models\Reply;
 use Carbon\Carbon;
-use Cache;
-use DB;
-use Arr;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Arr;
 
 trait ActiveUserHelper
 {
