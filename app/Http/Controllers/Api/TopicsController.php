@@ -9,12 +9,33 @@ use Illuminate\Http\Request;
 
 class TopicsController extends Controller
 {
+    /**
+     * 创建话题
+     * @param TopicRequest $request
+     * @param Topic $topic
+     * @return TopicResource
+     */
     public function store(TopicRequest $request, Topic $topic)
     {
         $topic->fill($request->all());
         $topic->user_id = $request->user()->id;
         $topic->save();
 
+        return new TopicResource($topic);
+    }
+
+    /**
+     * 修改话题
+     * @param TopicRequest $request
+     * @param Topic $topic
+     * @return TopicResource
+     * @throws \Illuminate\Auth\Access\AuthorizationException
+     */
+    public function update(TopicRequest $request, Topic $topic)
+    {
+        $this->authorize('update', $topic);
+
+        $topic->update($request->all());
         return new TopicResource($topic);
     }
 }
