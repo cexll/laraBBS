@@ -2,37 +2,44 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Requests\Api\AuthorizationRequest;
 use App\Http\Requests\Api\SocialAuthorizationRequest;
 use App\Models\User;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\Request;
+use Laminas\Diactoros\Response as Psr7Response;
+
+
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
+use League\OAuth2\Server\AuthorizationServer;
+use League\OAuth2\Server\Exception\OAuthServerException;
+use League\OAuth2\Server\RequestTypes\AuthorizationRequest;
+use Psr\Http\Message\ServerRequestInterface;
 
 class AuthorizationsController extends Controller
 {
 
-    /**
-     * @param AuthorizationRequest $request
-     * @return \Illuminate\Http\JsonResponse
-     * @throws AuthenticationException
-     */
-    public function store(AuthorizationRequest $request)
+
+    public function store(AuthorizationRequest $originRequest, AuthorizationServer $server, ServerRequestInterface $serverRequest)
     {
-        $username= $request->username;
-
-        filter_var($username, FILTER_VALIDATE_EMAIL) ?
-            $credentials['email'] = $username :
-            $credentials['phone'] = $username;
-
-        $credentials['password'] = $request->password;
-
-        if (!$token = Auth::guard('api')->attempt($credentials)) {
-            throw new AuthenticationException(trans('auth.failed'));
+        try {
+            return $server->respondToAccessTokenRequest($serverRequest, new Psr7Response)->withStatus(201);
+        } catch (OAuthServerException $e) {
+            throw new AuthenticationException($e->getMessage());
         }
-
-        return $this->respondwithToken($token)->setStatusCode(201);
+//        $username= $request->username;
+//
+//        filter_var($username, FILTER_VALIDATE_EMAIL) ?
+//            $credentials['email'] = $username :
+//            $credentials['phone'] = $username;
+//
+//        $credentials['password'] = $request->password;
+//
+//        if (!$token = Auth::guard('api')->attempt($credentials)) {
+//            throw new AuthenticationException(trans('auth.failed'));
+//        }
+//
+//        return $this->respondwithToken($token)->setStatusCode(201);
     }
 
 
@@ -93,21 +100,33 @@ class AuthorizationsController extends Controller
 
 
     /**
-     * @return \Illuminate\Http\JsonResponse
+     * @param AuthorizationServer $server
+     * @param ServerRequestInterface $serverRequest
+     * @return \Psr\Http\Message\ResponseInterface
      */
-    public function update()
+    public function update(AuthorizationServer $server, ServerRequestInterface $serverRequest)
     {
-        $token = auth('api')->refresh();
-        return $this->respondwithToken($token);
+        try {
+            return $server->respondToAccessTokenRequest($serverRequest, new Psr7Response);
+        } catch (OAuthServerException $e) {
+            return $this->response->errorUnauthorized($e->getMessage());
+        }
+//        $token = auth('api')->refresh();
+//        return $this->respondwithToken($token);
     }
 
-    /**
-     * @return \Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\Routing\ResponseFactory|\Illuminate\Http\Response
-     */
+
     public function destroy()
     {
-        auth('api')->logout();
-        return response(null, 204);
+        if (\auth('api')->check()) {
+            \auth('api')->user()->token()->revoke();
+            return response(null, 204);
+        } else {
+            throw new AuthenticationException('The token is invalid.');
+        }
+
+//        auth('api')->logout();
+//        return response(null, 204);
     }
 
     /**
