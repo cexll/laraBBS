@@ -9,10 +9,39 @@ use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
-use Laravel\Socialite\Facades\Socialite;
 
 class AuthorizationsController extends Controller
 {
+
+    /**
+     * @param AuthorizationRequest $request
+     * @return \Illuminate\Http\JsonResponse
+     * @throws AuthenticationException
+     */
+    public function store(AuthorizationRequest $request)
+    {
+        $username= $request->username;
+
+        filter_var($username, FILTER_VALIDATE_EMAIL) ?
+            $credentials['email'] = $username :
+            $credentials['phone'] = $username;
+
+        $credentials['password'] = $request->password;
+
+        if (!$token = Auth::guard('api')->attempt($credentials)) {
+            throw new AuthenticationException(trans('auth.failed'));
+        }
+
+        return $this->respondwithToken($token)->setStatusCode(201);
+    }
+
+
+    /**
+     * @param $type
+     * @param SocialAuthorizationRequest $request
+     * @return \Illuminate\Http\JsonResponse
+     * @throws AuthenticationException
+     */
     public function socialStore($type, SocialAuthorizationRequest $request)
     {
         $driver = \Socialite::driver($type);
@@ -62,35 +91,29 @@ class AuthorizationsController extends Controller
         return $this->respondwithToken($token)->setStatusCode(201);
     }
 
-    public function store(AuthorizationRequest $request)
-    {
-        $username= $request->username;
 
-        filter_var($username, FILTER_VALIDATE_EMAIL) ?
-            $credentials['email'] = $username :
-            $credentials['phone'] = $username;
-
-        $credentials['password'] = $request->password;
-
-        if (!$token = Auth::guard('api')->attempt($credentials)) {
-            throw new AuthenticationException('用户名或密码错误');
-        }
-
-        return $this->respondwithToken($token)->setStatusCode(201);
-    }
-
+    /**
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function update()
     {
         $token = auth('api')->refresh();
         return $this->respondwithToken($token);
     }
 
+    /**
+     * @return \Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\Routing\ResponseFactory|\Illuminate\Http\Response
+     */
     public function destroy()
     {
         auth('api')->logout();
         return response(null, 204);
     }
 
+    /**
+     * @param $token
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function respondwithToken($token)
     {
         return response()->json([

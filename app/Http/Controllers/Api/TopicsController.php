@@ -23,16 +23,6 @@ class TopicsController extends Controller
     {
         $topics = $query->paginate();
 
-//
-//        $topics = QueryBuilder::for(Topic::class)
-//            ->allowedIncludes('user', 'category')
-//            ->allowedFilters([
-//                'title',
-//                AllowedFilter::exact('category_id'),
-//                AllowedFilter::scope('withOrder')->default('recentReplied'),
-//            ])
-//            ->paginate();
-
         return TopicResource::collection($topics);
 
     }
@@ -46,16 +36,6 @@ class TopicsController extends Controller
     public function userIndex(Request $request, User $user, TopicQuery $query)
     {
         $topics = $query->where('user_id', $user->id)->paginate();
-//        $query = $user->topics()->getQuery();
-
-//        $topics = QueryBuilder::for($query)
-//            ->allowedIncludes('user', 'category')
-//            ->allowedFilters([
-//                'title',
-//                AllowedFilter::exact('category_id'),
-//                AllowedFilter::scope('withOrder')->default('recentReplied'),
-//            ])
-//            ->paginate();
 
         return TopicResource::collection($topics);
     }
@@ -65,7 +45,7 @@ class TopicsController extends Controller
      * 创建话题
      * @param TopicRequest $request
      * @param Topic $topic
-     * @return TopicResource
+     * @return TopicResource|void
      */
     public function store(TopicRequest $request, Topic $topic)
     {
