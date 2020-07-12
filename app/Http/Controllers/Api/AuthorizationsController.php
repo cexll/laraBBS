@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Requests\Api\SocialAuthorizationRequest;
 use App\Models\User;
+use App\Traits\PassportToken;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\Request;
 use Laminas\Diactoros\Response as Psr7Response;
@@ -11,6 +12,7 @@ use Laminas\Diactoros\Response as Psr7Response;
 
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
+use Laravel\Socialite\Facades\Socialite;
 use League\OAuth2\Server\AuthorizationServer;
 use League\OAuth2\Server\Exception\OAuthServerException;
 use League\OAuth2\Server\RequestTypes\AuthorizationRequest;
@@ -18,6 +20,7 @@ use Psr\Http\Message\ServerRequestInterface;
 
 class AuthorizationsController extends Controller
 {
+    use PassportToken;
 
 
     public function store(AuthorizationRequest $originRequest, AuthorizationServer $server, ServerRequestInterface $serverRequest)
@@ -43,16 +46,12 @@ class AuthorizationsController extends Controller
     }
 
 
-    /**
-     * @param $type
-     * @param SocialAuthorizationRequest $request
-     * @return \Illuminate\Http\JsonResponse
-     * @throws AuthenticationException
-     */
+
     public function socialStore($type, SocialAuthorizationRequest $request)
     {
         $driver = \Socialite::driver($type);
 
+        $user = User::first();
         try {
             if ($code = $request->code) {
                 $response = $driver->getAccessTokenResponse($code);
@@ -67,7 +66,7 @@ class AuthorizationsController extends Controller
 
             $oauthUser = $driver->userFromToken($token);
         } catch (\Exception $e) {
-            throw new AuthenticationException('参数错误，未获取用户信息');
+            throw new AuthenticationException('参数错误，未获取用户信息_'.$e->getMessage());
         }
 
         switch ($type) {
@@ -93,9 +92,9 @@ class AuthorizationsController extends Controller
                 break;
         }
 
-        $token = auth('api')->login($user);
+        $result = $this->getBearerTokenByUser($user, '1', false);
 
-        return $this->respondwithToken($token)->setStatusCode(201);
+        return response()->json($result)->setStatusCode(201);
     }
 
 
